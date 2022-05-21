@@ -1,3 +1,11 @@
 
 VideoPose3D/
 test.ipynb
+full_features.py
+MGSampler/
+combined_dataset/
+data-clean/
+data-washer/
+IOT Classification Challenge/
+IotLabData.zip
+subsampled_featurized_dataset_backup_ver1.zip
