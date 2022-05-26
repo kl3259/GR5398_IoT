@@ -7,6 +7,9 @@ The project is aimed at developing new tools for classifying videos of human-mac
 
 ### **Week 05/25/2022**
 * Make sanity checks using synthetic data w/ 2-3 core features and 5-10 redundant features
+  * Syncthetic data
+  * Logistic Regression
+  * Model Comparison: LR + all features b/w LR + directions selected by SAVE
 * Figure out why SAVE returns the ratio of top1 eigenvalue to top2 eigenvalue close to 1 (should be large)
 * Plot learning curves w/ n_directions as x-axis
 
