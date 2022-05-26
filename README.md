@@ -12,6 +12,7 @@ The project is aimed at developing new tools for classifying videos of human-mac
   * Model Comparison: LR + all features b/w LR + directions selected by SAVE
 * Figure out why SAVE returns the ratio of top1 eigenvalue to top2 eigenvalue close to 1 (should be large)
 * Plot learning curves w/ n_directions as x-axis
+* Brief report
 
 
 
