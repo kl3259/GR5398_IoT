@@ -1,13 +1,12 @@
 
 VideoPose3D/
 test.ipynb
-full_features.py
 MGSampler/
 combined_dataset/
 data-clean/
 data-washer/
 IOT Classification Challenge/
-IotLabData.zip
-subsampled_featurized_dataset_backup_ver1.zip
-IOT_Classification_Challenge_kl3259_backup_0520.ipynb
-IOT_Classification_Challenge_kl3259_local.ipynb
+/data/IotLabData.zip
+/data/subsampled_featurized_dataset_backup_ver1.zip
+/doc/IOT_Classification_Challenge_kl3259_backup_0520.ipynbIOT_Classification_Challenge_kl3259_local.ipynb
+/doc/IOT_Classification_Challenge_kl3259_local.ipynb
