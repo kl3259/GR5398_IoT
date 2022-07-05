@@ -23,4 +23,8 @@ The project is aimed at developing new tools for classifying videos of human-mac
 * Transformed data length?
 
 
+### **Week 07/05/2022**
+* Consider dimension reduction for multivariate longitudinal data
+  * Latent Markov Model
+    1. Define optimal one-dimensinal summaries and the orthonomal weight space
 
