@@ -53,7 +53,7 @@ The project is aimed at developing new tools for classifying videos of human-mac
 
 **_Algorithm Dynamic Time Warping_**
 1. Calculate distance matrix $M$
-   $$\bf{M_{i,j}}(\bf{x_a}, \bf{x_b}) = \sum_{k = 1}^{d} (x_{a,i,k} - x_{b,j,k})^2$$
+   $$M_{i,j}(\bf{x_a}, \bf{x_b}) = \sum_{k = 1}^{d} (x_{a,i,k} - x_{b,j,k})^2$$
 2. Define warping path $P = ((e_1, f_1), ... , (e_s, f_s))$ subject to constratints:
    * $(e_1, f_1) = (1,1)$ and $(e_s, f_s) = (m,m)$
    * $0 \leq e_{i+1} - e_i \leq 1$ for all $ 1 \leq i \leq m$
