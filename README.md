@@ -56,12 +56,11 @@ The project is aimed at developing new tools for classifying videos of human-mac
    $$M_{i,j}(\bf{x_a}, \bf{x_b}) = \sum_{k = 1}^{d} (x_{a,i,k} - x_{b,j,k})^2$$
 2. Define warping path $P = ((e_1, f_1), ... , (e_s, f_s))$ subject to constratints:
    * $(e_1, f_1) = (1,1)$ and $(e_s, f_s) = (m,m)$
-   * $0 \leq e_{i+1} - e_i \leq 1$ for all $ 1 \leq i \leq m$
-   * $0 \leq f_{i+1} - f_i \leq 1$ for all $ 1 \leq i \leq m$
+   * $0 \leq e_{i+1} - e_i \leq 1$ for all $1 \leq i \leq m$
+   * $0 \leq f_{i+1} - f_i \leq 1$ for all $1 \leq i \leq m$
 3. Let $p_i = M_{e_i, f_i}$ as the step $i$ in path, the total distance for a path is $D_p = \sum_{i=1}^{m}p_i$ 
 4. Find the path w/ minimal accumulative distance $P^* = min_{p \in P} D_P(x_a,x_b)$ 
 5. Get the optimal distance by **Dynamic Programming**: 
    $$DTW(i,j) = M_{i,j} + min\left\{\begin{aligned}& DTW(i-1, j), \\& DTW(i, j-1), \\& DTW(i-1, j-1). \\\end{aligned}\right.$$
-
    return final distance: $DTW(m,m)$ 
 
