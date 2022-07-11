@@ -26,5 +26,21 @@ The project is aimed at developing new tools for classifying videos of human-mac
 ### **Week 07/05/2022**
 * Consider dimension reduction for multivariate longitudinal data
   * Latent Markov Model
-    1. Define optimal one-dimensinal summaries and the orthonomal weight space
+    * Define optimal one-dimensinal summaries and the orthonomal weight space
+
+
+### **Week 07/10/2022**
+* **Multivariate Time Series Classification (MTSC)**
+  * _discriminatory features may be in the interactions between dimensions, not just in the autocorrelation within an individual series_
+  * Approaches:
+    * Deep learning based methods
+    * Shaplets method
+    * Bag of Words approaches
+    * Distance based approaches: Dynamic Time Warping -> benchmark
+    * Ensemble univariate TSC classifiers over the multivariate dimensions
+
+#### **Dynamic Time Warping**
+* Intuition: 1NN classifier + specific distance function + series re-alignment
+* Can be used in unequal series
+
 
