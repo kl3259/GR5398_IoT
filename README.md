@@ -61,6 +61,6 @@ The project is aimed at developing new tools for classifying videos of human-mac
 3. Let $p_i = M_{e_i, f_i}$ as the step $i$ in path, the total distance for a path is $D_p = \sum_{i=1}^{m}p_i$
 4. Find the path w/ minimal accumulative distance $P^* = min_{p \in P} D_P(x_a,x_b)$
 5. Get the optimal distance by **Dynamic Programming**: 
-   $$DTW(i,j) = M_{i,j} + min\left\{\begin{aligned}& DTW(i-1, j), \\& DTW(i, j-1), \\& DTW(i-1, j-1). \\\end{aligned}\right.$$
+$$DTW(i,j) = M_{i,j} + min\left\{\begin{aligned}& DTW(i-1, j), \\& DTW(i, j-1), \\& DTW(i-1, j-1). \\\end{aligned}\right.$$
    return final distance: $DTW(m,m)$
 
