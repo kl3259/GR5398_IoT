@@ -49,7 +49,7 @@ The project is aimed at developing new tools for classifying videos of human-mac
 
   Let $m$ denote the number of time steps and $d$ denote the number of predictors
 
-  Assume that the correct warping is the same across all dimensions -> distance is like Euclidean distance between 2 vectors of all dimensions from MTSC $\bf{x_a}$ and $\bf{x_b}$ 
+  Assume that the correct warping is the same across all dimensions -> distance is like Euclidean distance between 2 vectors of all dimensions from MTSC $x_a$ and $x_b$ 
 
 **_Algorithm: Dynamic Time Warping_**
 1. Calculate distance matrix $M$
@@ -62,6 +62,6 @@ The project is aimed at developing new tools for classifying videos of human-mac
 4. Find the path w/ minimal accumulative distance $P^* = min_{p \in P} D_P(x_a,x_b)$ 
 5. Get the optimal distance by **Dynamic Programming**: 
    $$DTW(i,j) = M_{i,j} + min\left\{\begin{aligned}& DTW(i-1, j), \\& DTW(i, j-1), \\& DTW(i-1, j-1). \\\end{aligned}\right.$$
-   
+
    return final distance: $DTW(m,m)$ 
 
