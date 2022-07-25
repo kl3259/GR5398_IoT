@@ -62,7 +62,7 @@ The project is aimed at developing new tools for classifying videos of human-mac
 4. Find the path w/ minimal accumulative distance $P^* = min_{p \in P} D_P(x_a,x_b)$ 
 5. Get the optimal distance by **Dynamic Programming**: 
    
-   ![](https://latex.codecogs.com/gif.image?\large&space;\dpi{120}DTW(i,j)&space;=&space;M_{i,j}&space;&plus;&space;min\left\{\begin{aligned}&&space;DTW(i-1,&space;j),&space;\\&&space;DTW(i,&space;j-1),&space;\\&&space;DTW(i-1,&space;j-1).&space;\\\end{aligned}\right.)
+   ![](https://latex.codecogs.com/svg.image?DTW(i,j)%20=%20M_%7Bi,j%7D%20&plus;%20min%5Cleft%5C%7B%5Cbegin%7Baligned%7D&%20DTW(i-1,%20j),%20%5C%5C&%20DTW(i,%20j-1),%20%5C%5C&%20DTW(i-1,%20j-1).%20%5C%5C%5Cend%7Baligned%7D%5Cright.)
 
    return final distance: $DTW(m,m)$ 
 
