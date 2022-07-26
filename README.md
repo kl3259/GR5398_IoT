@@ -30,7 +30,7 @@ The project is aimed at developing new tools for classifying videos of human-mac
     * Define optimal one-dimensinal summaries and the orthonomal weight space
 
 
-### **Week 07/10/2022**
+### **Week 07/11/2022**
 * **Multivariate Time Series Classification (MTSC)**
   * _discriminatory features may be in the interactions between dimensions, not just in the autocorrelation within an individual series_
   * Approaches:
@@ -62,7 +62,43 @@ The project is aimed at developing new tools for classifying videos of human-mac
 4. Find the path w/ minimal accumulative distance $P^* = min_{p \in P} D_P(x_a,x_b)$ 
 5. Get the optimal distance by **Dynamic Programming**: 
    
-   ![](https://latex.codecogs.com/svg.image?DTW(i,j)%20=%20M_%7Bi,j%7D%20&plus;%20min%5Cleft%5C%7B%5Cbegin%7Baligned%7D&%20DTW(i-1,%20j),%20%5C%5C&%20DTW(i,%20j-1),%20%5C%5C&%20DTW(i-1,%20j-1).%20%5C%5C%5Cend%7Baligned%7D%5Cright.)
+   ![](https://latex.codecogs.com/svg.image?%5Clarge%20DTW(i,j)%20=%20M_%7Bi,j%7D%20&plus;%20min%5Cleft%5C%7B%5Cbegin%7Baligned%7D&%20DTW(i-1,%20j),%20%5C%5C&%20DTW(i,%20j-1),%20%5C%5C&%20DTW(i-1,%20j-1).%20%5C%5C%5Cend%7Baligned%7D%5Cright.)
 
    return final distance: $DTW(m,m)$ 
+
+
+### **Week 07/18/2022**
+
+### **Random Convolutional Kernel Transform (ROCKET)**
+* Feature capture by convolutional kernels
+  * Effective in CNN like ResNet and InceptionTime
+* Intuition: Kernels can detect patterns in time series despite warping. Pooling mechanisms make kernels invariant to the position of patterns in time series. Dilation allows kernels with similar weights to capture patterns at different scales, i.e., despite rescaling. Multiple kernels with different dilations can, in combination, capture discriminative
+patterns despite complex warping. 
+* Use a large number of random convolutional kernels, default number is 10,000
+* Randomization: random length, weights, bias, dilation, and padding
+* Classifier: Ridge Regression / Logistic Regression
+  * Receive transformed features as input
+* Similar feature maps like global max pooling
+* Introduced **proportion of positive values (ppv)**, which enables a classifier to weight the prevalence of a given pattern within a time series
+* When using Logistic Regression as classifier, ROCKET actually becomes a single layer CNN w/o nonlinearities
+
+**_Algorithm: ROCKET_**
+1. Determine number of kernels $N$, and number of features per kernel $n$
+2. Generate kernels, for each kernel:
+   * Length: $l = \{7,9,11\}$ w/ equal probability
+   * Weights: $w \sim N(0,1)$, then pick the mean centered weight $w = w - \bar{W}$
+   * Bias: $b \sim U(-1, 1)$
+   * Dilation: $d = \lfloor 2^x \rfloor, x \sim U(0, A), A = \log_2{\frac{l_{input} - 1}{l_{kernel} - 1}}$
+   * Padding: randomly determine whether using padding or not(50% / 50%) for each kernel, if used, $p= (l_{kernel} - 1) \times d / 2$
+   * Stride: $s = 1$
+3. Transform
+
+
+
+
+
+
+
+
+
 
