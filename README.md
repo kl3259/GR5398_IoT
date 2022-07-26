@@ -102,7 +102,7 @@ patterns despite complex warping.
    * Ridge Regression for n_samples < n_features, other wise use Logistic Regression
    * Cross validation for hyperparameters
 
-### **Week 07/18/2022**
+### **Week 07/25/2022**
 * Information Exchange Block (IEBlock)
 
 
