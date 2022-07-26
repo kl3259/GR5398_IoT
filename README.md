@@ -3,8 +3,6 @@
 
 The project is aimed at developing new tools for classifying videos of human-machine interactions in the Internet-of-Things (IOT) domain. Namely, given videos of humans interacting with IoT devices (i.e. smart appliances such as fridge, toaster, washing machines, Alexa, etc), the aim is to (1) design predictive video features, which (2) can be extracted efficiently in real-time to classify videos in terms of the activity being performed (opening or closing a fridge, loading or unloading a washing machine, etc.). The grand goal and motivation for the work is to generate labels for IoT network traffic, simply by training cameras onto IoT devices in the various IoT labs across US universities. Thus, the project aims to solve a main bottleneck in research at the intersection of Machine Learning and IoT, namely, the scarcity of labeled IoT traffic data to solve ML problems such as activity and anomaly detection using supervised or unsupervised detection procedures. 
 
-<br>
-
 
 ### **Week 05/24/2022**
 * Make sanity checks using synthetic data w/ 2-3 core features and 5-10 redundant features
@@ -21,10 +19,12 @@ The project is aimed at developing new tools for classifying videos of human-mac
 * All-In-One learning curve
   *  GridSearch best parameters when plotting learning curve
 * Check basis by comparing distances / angles
-* Transformed data length?
+* Transformed data length
 
 
 ### **Week 07/05/2022**
+* SAVE can find the sufficient direction, but there is no improvement for the classification
+  * Change classifier
 * Consider dimension reduction for multivariate longitudinal data
   * Latent Markov Model
     * Define optimal one-dimensinal summaries and the orthonomal weight space
@@ -91,9 +91,19 @@ patterns despite complex warping.
    * Dilation: $d = \lfloor 2^x \rfloor, x \sim U(0, A), A = \log_2{\frac{l_{input} - 1}{l_{kernel} - 1}}$
    * Padding: randomly determine whether using padding or not(50% / 50%) for each kernel, if used, $p= (l_{kernel} - 1) \times d / 2$
    * Stride: $s = 1$
-3. Transform
+3. Transformation
+   * For kernel $w \in W$ and time step $i$ in time series $X$, for each kernel $w$ w/ dilation $d$ bias $b$ applying to a time series $X$, the convolution operation is: 
+     $$X_i \cdot w = b + (\sum_{j = 0}^{l_{kernel} - 1} X_{i + (j \times d)} \times w_j)$$
+   * Compute aggregate features, 10,000 kernels -> 20,000 features:
+     1. maximum value (maxpooling)
+     2. proportion of positive values (ppv): Assume that $Z$ is the output of convolution operation, 
+        $$ppv(Z) = \frac{1}{n}\sum_{i = 0}^{n-1} I(z_i > 0)$$
+4. Classification
+   * Ridge Regression for n_samples < n_features, other wise use Logistic Regression
+   * Cross validation for hyperparameters
 
-
+### **Week 07/18/2022**
+* Information Exchange Block (IEBlock)
 
 
 
