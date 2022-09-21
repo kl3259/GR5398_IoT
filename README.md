@@ -65,7 +65,7 @@ The project is aimed at developing new tools for classifying videos of human-mac
    ![](https://latex.codecogs.com/svg.image?%5Clarge%20DTW(i,j)%20=%20M_%7Bi,j%7D%20&plus;%20min%5Cleft%5C%7B%5Cbegin%7Baligned%7D&%20DTW(i-1,%20j),%20%5C%5C&%20DTW(i,%20j-1),%20%5C%5C&%20DTW(i-1,%20j-1).%20%5C%5C%5Cend%7Baligned%7D%5Cright.)
 
    return final distance: $DTW(m,m)$ 
-
+6. Classification: 1NN
 
 ### **Week 07/18/2022**
 
