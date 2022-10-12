@@ -74,7 +74,7 @@ def get_corr(margin, confidence):
     '''
     assert margin.shape == confidence.shape
     corr = np.corrcoef(confidence, margin)
-    print(f'Corr: {corr:10.6f}')
+    print(f'Corr: {corr[0,1]:10.6f}')
 
     return corr
 
