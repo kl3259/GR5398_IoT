@@ -107,8 +107,8 @@ def get_loss_acc_w_weight(model, dataloader, criterion=nn.CrossEntropyLoss()):
             logits = model(X_batch)
             y_pred = torch.argmax(logits, dim=1)
             correct += torch.mul(weight_batch, y_pred == Y_batch).cpu().numpy()
-            loss = criterion(torch.softmax(logits), Y_batch)
-            weighted_loss = torch.mul(loss, weight_batch)
+            loss = criterion(torch.softmax(logits), Y_batch, reduction = None)
+            weighted_loss = torch.mean(torch.mul(loss, weight_batch))
             total_loss += weighted_loss.item()
     acc = correct / total # weighted acc
     total_loss = total_loss / num_batches
