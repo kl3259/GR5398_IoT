@@ -3,7 +3,6 @@ import torch.nn as nn
 import os
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
-from utils import get_loss_acc
 from utils_weighted import get_loss_acc_w_weight
 from model import transformer_base, transformer_large, transformer_huge
 
@@ -46,7 +45,7 @@ def prepare_data_w_weight(test_ratio=0.2, weights = np.ones(951) / 951.0, seed=2
     trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=20, shuffle=False)
 
-    return trainloader, testloader
+    return trainloader, testloader, test_idx
 
 
 def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path):
@@ -112,7 +111,7 @@ def train_transfomer_w_weight(size="base"):
     for i in range(5):
         this_seed = seed + i
         save_path = model_save_dir + "Transformer_{}_{}_margin.pth".format(size, i+1)
-        trainloader, testloader = prepare_data_w_weight(test_ratio=0.2, seed=this_seed)
+        trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio=0.2, seed=this_seed)
 
         # train model
         if size == "base":
