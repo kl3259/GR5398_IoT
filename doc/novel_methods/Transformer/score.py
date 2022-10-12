@@ -82,6 +82,10 @@ def get_corr(margin, confidence):
     return corr
 
 def get_all_corr():
+    '''
+    Compute and all the correlation coefficients with respect to different transformers
+    :return: data frame of correlation coefficients
+    '''
     import pandas as pd
     corr_list = []
     result_df = pd.DataFrame(data = None, columns = ["base", "large", "huge"], index = [1, 2, 3, 4, 5])
