@@ -110,7 +110,7 @@ def train_transfomer_w_weight(size="base"):
 
     for i in range(5):
         this_seed = seed + i
-        save_path = model_save_dir + "Transformer_{}_{}_margin.pth".format(size, i+1)
+        save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
         trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio=0.2, seed=this_seed)
 
         # train model
