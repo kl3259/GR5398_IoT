@@ -3,8 +3,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from sklearn.preprocessing import MinMaxScaler
+from model import transformer_base, transformer_huge, transformer_large
+from train_weighted import prepare_data_w_weight
+from utils_weighted import FEATURE_ARCHIVE
 
-DETECTRON_SCORE_PATH = '../../feature_archive/confidence_scores_by_frame.npy'
+DETECTRON_SCORE_PATH = FEATURE_ARCHIVE + 'confidence_scores_by_frame.npy'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # DEVICE = "mps"
 
@@ -77,6 +80,33 @@ def get_corr(margin, confidence):
     print(f'Corr: {corr[0,1]:10.6f}')
 
     return corr
+
+def get_all_corr():
+    import pandas as pd
+    corr_list = []
+    result_df = pd.DataFrame(data = None, columns = ["base", "large", "huge"], index = [1, 2, 3, 4, 5])
+    for name in result_df.columns:
+        for i in range(1, 6):
+            MODEL_WEIGHT_PATH = '../model_weights/Transformer_' + name + '_' + str(i) + '.pth'
+            if name == 'base':
+                model = transformer_base()
+            elif name == 'large':
+                model = transformer_large()
+            elif name == 'huge':
+                model = transformer_huge()
+            model.to(DEVICE)
+            weight_path = MODEL_WEIGHT_PATH
+            model.load_state_dict(torch.load(weight_path, map_location = DEVICE))
+
+            video_scores_all, video_scores_upper = init_confidence_score()
+            _, testloader, test_idx = prepare_data_w_weight()
+            pred = get_prediction(model, testloader) # (190, 5)
+            margin = get_margin(pred) # (190,)
+            corr = get_corr(margin, video_scores_all[test_idx])
+            result_df.loc[i, name] = corr
+
+    return result_df
+
 
 
 if __name__ == "__main__":
