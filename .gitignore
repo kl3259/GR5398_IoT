@@ -12,3 +12,15 @@ IOT Classification Challenge/
 /doc/IOT_Classification_Challenge_kl3259_local.ipynb
 doc/horizontal_flip.py
 IoT-Activity-Detection-Clean/
+*.pth
+doc/novel_methods/Transformer/train.py
+doc/novel_methods/Transformer/results.ipynb
+doc/IOT_Classification_Challenge_kl3259_backup_0520.ipynb
+doc/novel_methods/results/base_10.npz
+doc/novel_methods/results/large_10.npz
+doc/novel_methods/Transformer/__pycache__/utils.cpython-39.pyc
+doc/novel_methods/Transformer/train_confidence.py
+doc/novel_methods/Transformer/train_mps.py
+doc/novel_methods/Transformer/train_with_margin.ipynb
+doc/novel_methods/Transformer/utils_confidence.py
+doc/novel_methods/Transformer/utils.py
