@@ -81,7 +81,7 @@ def prepare_data(test_ratio=0.2, seed=20220712):
 
 #     return total_loss, acc
 
-def get_loss_acc_w_weight(model, dataloader, criterion=nn.CrossEntropyLoss()):
+def get_loss_acc_w_weight(model, dataloader, criterion = nn.CrossEntropyLoss(reduction = 'none')):
     '''
     Comupute weighed loss function and accuracy based on weights batch
     :model: transformer model
@@ -105,10 +105,13 @@ def get_loss_acc_w_weight(model, dataloader, criterion=nn.CrossEntropyLoss()):
             total += torch.sum(weight_batch)
             num_batches += 1
             logits = model(X_batch)
-            y_pred = torch.argmax(logits, dim=1)
-            correct += torch.mul(weight_batch, y_pred == Y_batch).cpu().numpy()
-            loss = criterion(torch.softmax(logits), Y_batch, reduction = None)
-            weighted_loss = torch.mean(torch.mul(loss, weight_batch))
+            probs = torch.softmax(logits, dim = 1)
+            y_pred = torch.argmax(logits, dim = 1)
+            count_correct = (y_pred == Y_batch).to(device)
+            count_correct.get_device()
+            correct += torch.mul(weight_batch, count_correct).cpu().numpy()
+            loss = criterion(probs, Y_batch)
+            weighted_loss = torch.mean(torch.mul(loss, weight_batch)) # modify
             total_loss += weighted_loss.item()
     acc = correct / total # weighted acc
     total_loss = total_loss / num_batches

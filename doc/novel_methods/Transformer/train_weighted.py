@@ -74,10 +74,12 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
                  weight_batch = batch[2].to(device)
             # forward
             logits = model(X_batch)
-            loss = torch.mean(torch.mul(criterion(logits, Y_batch, reduction = None), weight_batch))
+            probs = torch.softmax(logits, dim = 1)
+            loss = torch.mul(criterion(probs, Y_batch), weight_batch)
+            loss_reducted = torch.mean(loss)
             # backward
             optimizer.zero_grad()
-            loss.backward()
+            loss_reducted.backward()
             optimizer.step()
 
         # evaluate
@@ -123,7 +125,7 @@ def train_transfomer_w_weight(size="base"):
 
         epochs = 200
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss(reduction = 'none')
         train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path)
 
 
