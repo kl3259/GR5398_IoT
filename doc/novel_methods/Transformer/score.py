@@ -48,37 +48,41 @@ def get_prediction(model, testloader):
     return pred
 
 
-def get_margin(pred):
+def get_margin(pred, method = "entropy"):
     '''
-    Compute margin by taking the mean value of the absolute difference from maximal class probability with other probabilities
+    Compute margin based on the method assigned
     :pred: prediction of probabilities of all test data after softmax inshape (test_size, n_classes)
+    :method: 
+        :mean: taking the mean value of the absolute difference from maximal class probability with other probabilities
+        :single: compute the margin from the absolute difference of highest and seconed highest class probailites
+        :entropy: compute entropy of all class probabilites as the margin
     :return: margin vector
     '''
     margin = np.empty(pred.shape[0])
     n = pred.shape[1]
-    for i in range(pred.shape[0]):
-        temp_max_prob = np.max(pred[i, :])
-        temp_max_prob_index = np.argmax(pred[i, :])
-        diff_list = []
-        for j in range(n):
-            if j == temp_max_prob_index:
-                continue
-            diff_list.append(np.abs(temp_max_prob - pred[i, j]))
-        margin[i] = np.mean(diff_list)
-    return margin
-
-def get_margin_alt(pred):
-    '''
-    Compute margin by taking the mean value of the absolute difference from maximal class probability with other probabilities
-    :pred: prediction of probabilities of all test data after softmax inshape (test_size, n_classes)
-    :return: margin vector
-    '''
-    margin = np.empty(pred.shape[0])
-    n = pred.shape[1]
-    for i in range(pred.shape[0]):
-        temp_max_prob = np.max(pred[i, :])
-        temp_min_prob = np.min(pred[i, :])
-        margin[i] = np.abs(temp_max_prob - temp_min_prob)
+    if method == "mean":
+        for i in range(pred.shape[0]):
+            temp_max_prob = np.max(pred[i, :])
+            temp_max_prob_index = np.argmax(pred[i, :])
+            diff_list = []
+            for j in range(n):
+                if j == temp_max_prob_index:
+                    continue
+                diff_list.append(np.abs(temp_max_prob - pred[i, j]))
+            margin[i] = np.mean(diff_list)
+    elif method == "single":
+        for i in range(pred.shape[0]):
+            temp_max_prob = np.max(pred[i, :])
+            temp_second_highest_prob = np.partition(pred[i, :].flatten(), -2)[-2]
+            temp_min_prob = np.min(pred[i, :])
+            margin[i] = np.abs(temp_max_prob - temp_second_highest_prob)
+    elif method == "entropy":
+        for i in range(pred.shape[0]):
+            log_prob = np.log2(pred[i, :])
+            entropy_vec = np.multiply(log_prob, pred[i,:])
+            margin[i] = -np.sum(entropy_vec)
+    else:
+        raise KeyError("Method is not available!")
     return margin
 
 
@@ -120,7 +124,7 @@ def get_all_corr():
             _, testloader, test_idx = prepare_data_w_weight()
             pred = get_prediction(model, testloader) # (190, 5)
             # margin = get_margin(pred) # (190,)
-            margin = get_margin_alt(pred) # (190,)
+            margin = get_margin(pred) # (190,) # updated
             corr = get_corr(margin, video_scores_all[test_idx]) # matrix
             result_df.loc[i, name] = corr[0, 1]
 
