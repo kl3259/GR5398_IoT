@@ -37,15 +37,17 @@ def get_prediction(model, testloader):
     Get predicted probabilities
     '''
     # prediction
-    pred_list = []
+    pred_list, y_true_list = [], []
     with torch.no_grad():
         model.eval()
         for step, (batch_x, batch_y, batch_weight) in enumerate(testloader):
             batch_x = batch_x.to(DEVICE)
             batch_pred = torch.softmax(model(batch_x), dim = 1).cpu().numpy()
             pred_list.append(batch_pred)
-    pred = np.concatenate(pred_list, axis = 0)
-    return pred
+            y_true_list.append(batch_y)
+    y_pred = np.concatenate(pred_list, axis = 0)
+    y_true = np.concatenate(y_true_list, axis = 0)
+    return y_pred, y_true
 
 
 def get_margin(pred, method = "entropy"):
@@ -96,7 +98,6 @@ def get_corr(margin, confidence):
     assert margin.shape == confidence.shape
     corr = np.corrcoef(confidence, margin)
     print(f'Corr: {corr[0,1]:10.6f}')
-
     return corr
 
 def get_all_corr():
@@ -110,6 +111,7 @@ def get_all_corr():
     for name in result_df.columns:
         for i in range(1, 6):
             MODEL_WEIGHT_PATH = '../model_weights/Transformer_' + name + '_' + str(i) + '.pth'
+            # load pretrained model
             if name == 'base':
                 model = transformer_base()
             elif name == 'large':
@@ -122,13 +124,37 @@ def get_all_corr():
 
             video_scores_all, video_scores_upper = init_confidence_score()
             _, testloader, test_idx = prepare_data_w_weight()
-            pred = get_prediction(model, testloader) # (190, 5)
+            pred, _ = get_prediction(model, testloader) # (190, 5)
             # margin = get_margin(pred) # (190,)
             margin = get_margin(pred) # (190,) # updated
             corr = get_corr(margin, video_scores_all[test_idx]) # matrix
             result_df.loc[i, name] = corr[0, 1]
 
     return result_df
+
+def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8]):
+    '''
+    Get test accuracy with subsets of high quality videos, quality measured by margin
+    :model: pretrained transformer default: transformer huge
+    :testloader: test dataloader
+    :margin: margin value for each test video
+    :return: list of test accuracy on those high quality videos
+    '''
+    from sklearn.metrics import accuracy_score
+    _, testloader, _ = prepare_data_w_weight()
+    y_pred, y_true = get_prediction(model, testloader)
+    margin = get_margin(y_pred, method = "entropy")
+    quantile_values = np.quantile(margin, quantile)
+    # get masks
+    mask = np.empty((len(margin), len(quantile)))
+    for i in range(len(quantile)):
+        mask[:, i] = (margin >= quantile_values[i])
+    # get test accuracy
+    y_pred = np.argmax(y_pred, axis = 1) # to dense form
+    accuracy_arr = np.empty(len(quantile))
+    for i in range(len(quantile)):
+        accuracy_arr[i] = accuracy_score(y_pred = y_pred[mask[:,i] == True], y_true = y_true[mask[:,i] == True])
+    return accuracy_arr
 
 
 
