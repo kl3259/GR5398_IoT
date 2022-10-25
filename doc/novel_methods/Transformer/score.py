@@ -132,7 +132,7 @@ def get_all_corr():
 
     return result_df
 
-def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8]):
+def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
     '''
     Get test accuracy with subsets of high quality videos, quality measured by margin
     :model: pretrained transformer default: transformer huge
@@ -148,11 +148,12 @@ def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8]):
     # get masks
     mask = np.empty((len(margin), len(quantile)))
     for i in range(len(quantile)):
-        mask[:, i] = (margin >= quantile_values[i])
+        mask[:, i] = (margin <= quantile_values[i]) # lower entropy is better!
     # get test accuracy
     y_pred = np.argmax(y_pred, axis = 1) # to dense form
     accuracy_arr = np.empty(len(quantile))
     for i in range(len(quantile)):
+        print(f'Number of high-quality videos: {np.sum(mask[:,i] == True)}')
         accuracy_arr[i] = accuracy_score(y_pred = y_pred[mask[:,i] == True], y_true = y_true[mask[:,i] == True])
     return accuracy_arr
 
