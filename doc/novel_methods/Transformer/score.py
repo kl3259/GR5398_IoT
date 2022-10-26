@@ -132,7 +132,7 @@ def get_all_corr():
 
     return result_df
 
-def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
+def get_high_quali_pred(model, seed, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
     '''
     Get test accuracy with subsets of high quality videos, quality measured by margin
     :model: pretrained transformer default: transformer huge
@@ -142,7 +142,7 @@ def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
     '''
     from sklearn.metrics import accuracy_score
     import pandas as pd
-    _, testloader, _ = prepare_data_w_weight()
+    _, testloader, _ = prepare_data_w_weight(seed = seed)
     y_pred, y_true = get_prediction(model, testloader)
     margin = get_margin(y_pred, method = "entropy")
     # import matplotlib

@@ -86,9 +86,9 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
         with torch.no_grad():
             model.eval()
             # evaluate train
-            train_loss, train_acc = get_loss_acc_w_weight(model, trainloader, criterion)
+            train_loss, train_acc = get_loss_acc_w_weight(model, trainloader, criterion) # weighted training
             # evaluate test
-            test_loss, test_acc = get_loss_acc_w_weight(model, testloader, criterion)
+            test_loss, test_acc = get_loss_acc(model, testloader, criterion) # test metrics are not weighted!
 
         print("Epoch {}/{} train loss: {}  test loss: {}  train acc: {}  test acc: {}".format(
             epoch+1, epochs, train_loss, test_loss, train_acc, test_acc))
