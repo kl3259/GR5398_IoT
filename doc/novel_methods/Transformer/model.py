@@ -75,7 +75,7 @@ class Attention(nn.Module):
         x = self.proj(x)
         x = self.proj_drop(x)
 
-        # reshape [batch_size*lenght+1, embed_dim] -> [batch_size, lenght+1, embed_dim]
+        # reshape [batch_size*lenght+1, embed_dim] -> [batch_size, length+1, embed_dim]
         x = x.reshape(B, L, P)
         return x
 
@@ -127,7 +127,7 @@ class Transformer(nn.Module):
     def __init__(self, n_features=34, num_classes=5, embed_dim=128, depth=3,
                  num_heads=8, mlp_ratio=4.0, qkv_bias=True,
                  qk_scale=None, drop_ratio=0., attn_drop_ratio=0.,
-                 embed_layer=Embedding, act_layer=None, norm_layer=None, attn = None):
+                 embed_layer=Embedding, act_layer=None, norm_layer=None):
         super(Transformer, self).__init__()
         self.num_classes = num_classes
         self.n_features = n_features
@@ -142,9 +142,6 @@ class Transformer(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.pos_embed = nn.Parameter(torch.zeros(1, self.length + self.num_tokens, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_ratio)
-        
-        # assign attn
-        self.attn = attn
 
         self.blocks = nn.Sequential(*[
             Block(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,

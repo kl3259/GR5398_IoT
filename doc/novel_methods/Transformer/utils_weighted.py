@@ -81,6 +81,21 @@ def prepare_data(test_ratio=0.2, seed=20220712):
 
 #     return total_loss, acc
 
+
+def get_attn(model):
+    '''
+    Compute attention for each training data
+    :model: trained transformer model
+    :output: attention for samples
+    '''
+    frame_attn = model.blocks[-1].attn.attn # (100,)
+    print(frame_attn)
+
+
+    return 
+
+
+
 def get_loss_acc_w_weight(model, dataloader, criterion = nn.CrossEntropyLoss(reduction = 'none')):
     '''
     Comupute weighed loss function and accuracy based on weights batch

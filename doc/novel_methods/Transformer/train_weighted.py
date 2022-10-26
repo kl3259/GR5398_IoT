@@ -75,7 +75,7 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
             # forward
             logits = model(X_batch)
             probs = torch.softmax(logits, dim = 1)
-            loss = torch.mul(criterion(probs, Y_batch), weight_batch)
+            loss = torch.mul(criterion(logits, Y_batch), weight_batch)
             loss_reducted = torch.mean(loss)
             # backward
             optimizer.zero_grad()

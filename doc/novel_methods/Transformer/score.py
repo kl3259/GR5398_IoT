@@ -141,9 +141,15 @@ def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
     :return: list of test accuracy on those high quality videos
     '''
     from sklearn.metrics import accuracy_score
+    import pandas as pd
     _, testloader, _ = prepare_data_w_weight()
     y_pred, y_true = get_prediction(model, testloader)
     margin = get_margin(y_pred, method = "entropy")
+    # import matplotlib
+    # from matplotlib import pyplot as plt
+    # fig, ax = plt.subplots(1, 1, dpi = 270)
+    # ax.hist(margin, bins = 200)
+    # ax.set_title("Histogram of Entropy")
     quantile_values = np.quantile(margin, quantile)
     # get masks
     mask = np.empty((len(margin), len(quantile)))
@@ -153,7 +159,7 @@ def get_high_quali_pred(model, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
     y_pred = np.argmax(y_pred, axis = 1) # to dense form
     accuracy_arr = np.empty(len(quantile))
     for i in range(len(quantile)):
-        print(f'Number of high-quality videos: {np.sum(mask[:,i] == True)}')
+        # print(f'Number of high-quality videos: {np.sum(mask[:,i] == True)}')
         accuracy_arr[i] = accuracy_score(y_pred = y_pred[mask[:,i] == True], y_true = y_true[mask[:,i] == True])
     return accuracy_arr
 
