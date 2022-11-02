@@ -3,7 +3,8 @@ import torch.nn as nn
 import os
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
-from utils_weighted import get_loss_acc_w_weight
+from utils_weighted import *
+from utils import get_loss_acc
 from model import transformer_base, transformer_large, transformer_huge
 
 from utils_weighted import FEATURE_ARCHIVE
@@ -22,7 +23,7 @@ class mydataset_w_weight(Dataset):
         return len(self.Label)
 
 # initialization weights uniformly
-def prepare_data_w_weight(test_ratio=0.2, weights = np.ones(951) / 951.0, seed=20220712):
+def prepare_data_w_weight(test_ratio = 0.2, weights = np.ones(951) / 951.0, seed = 20220712):
     all_data = np.load(FEATURE_ARCHIVE + "all_feature_interp951.npz", allow_pickle=True)
     X_all = all_data["X"]
     Y_all = all_data["Y"]
@@ -90,14 +91,14 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
             # evaluate test
             test_loss, test_acc = get_loss_acc(model, testloader, criterion) # test metrics are not weighted!
 
-        print("Epoch {}/{} train loss: {}  test loss: {}  train acc: {}  test acc: {}".format(
-            epoch+1, epochs, train_loss, test_loss, train_acc, test_acc))
-
         # save model weights if it's the best
         if test_acc >= best_test_acc:
             best_test_acc = test_acc
             torch.save(model.state_dict(), save_path)
             print("Saved!")
+    print("Epoch {:>4}/{:>4} | Training loss: {:>8} | Testing loss: {:>8} | Training acc: {:>8} | Testing acc: {:>8}".format(
+        epoch+1, epochs, train_loss, test_loss, train_acc, test_acc
+    ))
 
 
 def train_transfomer_w_weight(size="base"):
@@ -127,6 +128,47 @@ def train_transfomer_w_weight(size="base"):
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
         criterion = nn.CrossEntropyLoss(reduction = 'none')
         train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path)
+
+
+def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
+    """
+    Train a transformer model 5 times with different train test split. 
+    For each model, update sample weights by confidence score and retrain the model for weighted loss
+    :iterations: number of iterations for EM training
+    :method: the method to compute sample weights
+    :size: Size of the transformer model. "base" or "large" or "huge"
+    """
+    seed = 20220728
+    model_save_dir = "./model_weights/"
+    if not os.path.exists(model_save_dir):
+        os.mkdir(model_save_dir)
+    
+    if method == "attn":
+        for i in range(5):
+            this_seed = seed + i
+            save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
+
+            # instantiate model
+            if size == "base":
+                model = transformer_base()
+            elif size == "large":
+                model = transformer_large()
+            elif size == "huge":
+                model = transformer_huge()
+            
+            for iter in range(iterations):
+                if iter == 0:
+                    weights = np.ones(951) / 951.0 # initialize weights -> unweighted at first
+                this_seed = seed + i
+                save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
+                trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, seed = this_seed, weights = weights)
+
+                epochs = 200
+                optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
+                criterion = nn.CrossEntropyLoss(reduction = 'none')
+                train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
+                weights = get_conf(model = model, seed = this_seed) # update weights
+    pass
 
 
 

@@ -15,20 +15,20 @@ class Embedding(nn.Module):
         # transpose [B, P, L] -> [P, B, L]
         # flatten [P, B, L] -> [P, BL]
         # transpose [P, BL] -> [BL, P]
-        x = x.transpose(1, 0).flatten(1).permute(1,0)
+        x = x.transpose(1, 0).flatten(1).permute(1,0) # (B * 100, 34)
 
         # project [BL, P] -> [BL, embed_dim]
         # reshape [BL, embed_dim] -> [B, L, embed_dim]
         x = self.proj(x)
         x = self.norm(x)
-        x = x.reshape(B, L, self.embed_dim)
+        x = x.reshape(B, L, self.embed_dim) # (B, 100, 512)
 
         return x
 
 
 class Attention(nn.Module):
     def __init__(self,
-                 dim,
+                 dim, # dim = embed_dim
                  num_heads=8,
                  qkv_bias=False,
                  qk_scale=None,
@@ -42,11 +42,12 @@ class Attention(nn.Module):
         self.attn_drop = nn.Dropout(attn_drop_ratio)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop_ratio)
-        self.attn = None # added
+        self.frame_attn = None # added
+        self.video_attn = None # added
 
     def forward(self, x):
         # [batch_size, length+1, embed_dim]
-        B, L, P = x.shape
+        B, L, P = x.shape # (B, 101, 512)
 
         # flatten [batch_size, length + 1, embed_dim] -> [batch_size * (length+1), embed_dim]
         # qkv [batch_size*(length+1), embed_dim] -> [batch_size*(length+1), 3*embed_dim]
@@ -65,7 +66,7 @@ class Attention(nn.Module):
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        self.attn = attn   # for extracting frame attention in the future # Use this!
+        self.attn = attn # for extracting frame attention in the future # Use this! (10, 32, 101, 101)
 
         # @ -> [batch_size, num_heads, length+1, embed_dim_per_head]
         # transpose [batch_size, num_heads, length+1, embed_dim_per_head] -> [batch_size, lenght+1, num_heads, embed_dim_per_head]
@@ -77,6 +78,7 @@ class Attention(nn.Module):
 
         # reshape [batch_size*lenght+1, embed_dim] -> [batch_size, length+1, embed_dim]
         x = x.reshape(B, L, P)
+
         return x
 
 
@@ -163,9 +165,9 @@ class Transformer(nn.Module):
         # [batch_size, n_features, length] -> [batch_size, length, embed_dim]
         x = self.embedding(x)
 
-        #[1, 1, 128] -> [B, 1, 128]
-        cls_token = self.cls_token.expand(x.shape[0], -1, -1)
-        x = torch.cat((cls_token, x), dim=1)   # [B, 101, 128]
+        # [1, 1, 128] -> [B, 1, 128]
+        cls_token = self.cls_token.expand(x.shape[0], -1, -1) # encode seq classification info
+        x = torch.cat((cls_token, x), dim=1) # [B, 101, 128]
 
         x = self.pos_drop(x + self.pos_embed)
         x = self.blocks(x)
