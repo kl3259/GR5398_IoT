@@ -118,18 +118,20 @@ def prepare_data_w_weight(test_ratio=0.2, weights = np.ones(951) / 951.0, seed =
 #     return total_loss, acc
 
 
-def get_conf(model, seed):
+def get_conf(model, seed, method = "attn"):
     '''
     Compute confidence score based on attention for all video samples
     :model: trained transformer model
     :output: confidence score for each sample
     '''
+
     CONF_DIR = FEATURE_ARCHIVE + "confidence_scores_by_frame.npy"
     conf_keypoints = np.load(CONF_DIR) # raw confidence score in shape (n_videos, n_frame, n_keypoints)
     conf_keypoints = np.mean(conf_keypoints, axis = 2)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     frame_attn_list = []
+    prob_list = []
     model.to(device)
 
     all_data = np.load(FEATURE_ARCHIVE + "all_feature_interp951.npz", allow_pickle=True)
@@ -139,29 +141,51 @@ def get_conf(model, seed):
     all_dataset = mydataset(X_all, Y_all)
     allloader = DataLoader(all_dataset, batch_size = 64, shuffle = False)
 
-    with torch.no_grad():
-        # mask = np.ones(conf_keypoints.shape[0], dtype = np.bool)
-        # mask[test_idx] = 0
-        # conf_keypoints_train = conf_keypoints[mask, ...] # only for training data
-        for batch in allloader:
-            X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
-            if len(batch) == 3:
-                 weight_batch = batch[2].to(device)
-            # forward
-            logits = model(X_batch)
-            probs = torch.softmax(logits, dim = 1)
-            frame_attn = model.blocks[-1].attn.attn # (B, n_heads, length + 1, length + 1)
-            frame_attn = frame_attn[:,:,:100, :100] # remove cls token and positional encoding
-            frame_attn_single_head = torch.mean(frame_attn, dim = 1).cpu().numpy() # (B, length, length)
-            frame_attn_list.append(frame_attn_single_head)
+    if method == "attn":
+        with torch.no_grad():
+            # mask = np.ones(conf_keypoints.shape[0], dtype = np.bool)
+            # mask[test_idx] = 0
+            # conf_keypoints_train = conf_keypoints[mask, ...] # only for training data
+            for batch in allloader:
+                X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
+                if len(batch) == 3:
+                    weight_batch = batch[2].to(device)
+                # forward
+                logits = model(X_batch)
+                probs = torch.softmax(logits, dim = 1)
+                frame_attn = model.blocks[-1].attn.attn # (B, n_heads, length + 1, length + 1)
+                frame_attn = frame_attn[:,:,:100, :100] # remove cls token and positional encoding
+                frame_attn_single_head = torch.mean(frame_attn, dim = 1).cpu().numpy() # (B, length, length)
+                frame_attn_list.append(frame_attn_single_head)
 
-        frame_attn_train = np.concatenate(frame_attn_list, axis = 0) # (n_training, length, length)
-        frame_attn_train = np.mean(frame_attn_train, axis = 2) # (n_training, length) -> attention by frame
-        # elementwise product
-        conf_score = conf_keypoints * frame_attn_train # elementwise product -> (n_training, n_frames)
-        conf_score = np.mean(conf_score, axis = 1) # (n_training, )
-        # minmax scalar
-        conf_score_std = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
+            frame_attn = np.concatenate(frame_attn_list, axis = 0) # (n_samples, length, length)
+            frame_attn = np.mean(frame_attn, axis = 2) # (n_samples, length) -> attention by frame
+            # elementwise product
+            conf_score = conf_keypoints * frame_attn # elementwise product -> (n_samples, n_frames)
+            conf_score = np.mean(conf_score, axis = 1) # (n_samples, )
+    elif method == "margin":
+        with torch.no_grad():
+            for batch in allloader:
+                X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
+                if len(batch) == 3:
+                    weight_batch = batch[2].to(device)
+                # forward
+                logits = model(X_batch)
+                probs = torch.softmax(logits, dim = 1)
+                prob_list.append(probs)
+            
+            pred = np.concatenate(prob_list, axis = 0)
+            conf_score = np.empty(pred.shape[0])
+
+            for i in range(pred.shape[0]):
+                temp_max_prob = np.max(pred[i, :])
+                temp_second_highest_prob = np.partition(pred[i, :].flatten(), -2)[-2]
+                temp_min_prob = np.min(pred[i, :])
+                conf_score[i] = np.abs(temp_max_prob - temp_second_highest_prob)
+
+
+    # minmax scalar
+    conf_score_std = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
 
     return conf_score_std
 

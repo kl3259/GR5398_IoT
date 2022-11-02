@@ -95,6 +95,9 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
         if test_acc >= best_test_acc:
             best_test_acc = test_acc
             torch.save(model.state_dict(), save_path)
+            print("Epoch {:>4}/{:>4} | Training loss: {:>8} | Testing loss: {:>8} | Training acc: {:>8} | Testing acc: {:>8}".format(
+                epoch+1, epochs, train_loss, test_loss, train_acc, test_acc
+            ))
             print("Saved!")
     print("Epoch {:>4}/{:>4} | Training loss: {:>8} | Testing loss: {:>8} | Training acc: {:>8} | Testing acc: {:>8}".format(
         epoch+1, epochs, train_loss, test_loss, train_acc, test_acc
@@ -143,29 +146,30 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
     if not os.path.exists(model_save_dir):
         os.mkdir(model_save_dir)
     
-    if method == "attn":
-        for i in range(5):
-            this_seed = seed + i
-            save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
+    for i in range(5):
+        this_seed = seed + i
+        save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
 
-            # instantiate model
-            if size == "base":
-                model = transformer_base()
-            elif size == "large":
-                model = transformer_large()
-            elif size == "huge":
-                model = transformer_huge()
-            
-            for iter in range(iterations):
-                if iter == 0:
-                    weights = np.ones(951) / 951.0 # initialize weights -> unweighted at first
-                trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, seed = this_seed, weights = weights)
+        # instantiate model
+        if size == "base":
+            model = transformer_base()
+        elif size == "large":
+            model = transformer_large()
+        elif size == "huge":
+            model = transformer_huge()
+        
+        for iter in range(iterations):
+            print(f'Iteration: {iter:4d}')
+            print('-' * 60)
+            if iter == 0:
+                weights = np.ones(951) / 951.0 # initialize weights -> unweighted at first
+            trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, seed = this_seed, weights = weights)
 
-                epochs = 200
-                optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
-                criterion = nn.CrossEntropyLoss(reduction = 'none')
-                train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
-                weights = get_conf(model = model, seed = this_seed) # update weights
+            epochs = 200
+            optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
+            criterion = nn.CrossEntropyLoss(reduction = 'none')
+            train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
+            weights = get_conf(model = model, seed = this_seed, method = method) # update weights
     pass
 
 
