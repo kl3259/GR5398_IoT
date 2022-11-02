@@ -171,7 +171,7 @@ def get_conf(model, seed, method = "attn"):
                     weight_batch = batch[2].to(device)
                 # forward
                 logits = model(X_batch)
-                probs = torch.softmax(logits, dim = 1)
+                probs = torch.softmax(logits, dim = 1).cpu().numpy()
                 prob_list.append(probs)
             
             pred = np.concatenate(prob_list, axis = 0)
