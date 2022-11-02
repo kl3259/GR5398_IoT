@@ -139,7 +139,7 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
     :size: Size of the transformer model. "base" or "large" or "huge"
     """
     seed = 20220728
-    model_save_dir = "./model_weights/"
+    model_save_dir = "../model_weights/"
     if not os.path.exists(model_save_dir):
         os.mkdir(model_save_dir)
     
@@ -159,8 +159,6 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
             for iter in range(iterations):
                 if iter == 0:
                     weights = np.ones(951) / 951.0 # initialize weights -> unweighted at first
-                this_seed = seed + i
-                save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
                 trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, seed = this_seed, weights = weights)
 
                 epochs = 200
