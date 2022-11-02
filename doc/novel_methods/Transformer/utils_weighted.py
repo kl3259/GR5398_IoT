@@ -168,9 +168,9 @@ def get_loss_acc_w_weight(model, dataloader, criterion = nn.CrossEntropyLoss(red
     '''
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    correct = 0
-    total = 0
-    total_loss = 0
+    correct = 0.0
+    total = 0.0
+    total_loss = 0.0
     num_batches = 0
 
     with torch.no_grad():
@@ -185,7 +185,7 @@ def get_loss_acc_w_weight(model, dataloader, criterion = nn.CrossEntropyLoss(red
             probs = torch.softmax(logits, dim = 1)
             y_pred = torch.argmax(logits, dim = 1)
             count_correct = (y_pred == Y_batch).to(device)
-            correct += torch.mul(weight_batch, count_correct).cpu().numpy()
+            correct += torch.sum(torch.mul(weight_batch, count_correct)).cpu().numpy()
             loss = criterion(probs, Y_batch)
             weighted_loss = torch.mean(torch.mul(loss, weight_batch)) # modify
             total_loss += weighted_loss.item()

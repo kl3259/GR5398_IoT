@@ -89,7 +89,7 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
             # evaluate train
             train_loss, train_acc = get_loss_acc_w_weight(model, trainloader, criterion) # weighted training
             # evaluate test
-            test_loss, test_acc = get_loss_acc(model, testloader, criterion) # test metrics are not weighted!
+            test_loss, test_acc = get_loss_acc(model, testloader) # test metrics are not weighted! -> default criterion
 
         # save model weights if it's the best
         if test_acc >= best_test_acc:
