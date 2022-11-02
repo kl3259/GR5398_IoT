@@ -178,14 +178,13 @@ def get_loss_acc_w_weight(model, dataloader, criterion = nn.CrossEntropyLoss(red
         for batch in dataloader:
             X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
             if len(batch) == 3:
-                weight_batch = batch[2]   # in case we need the index of samples in this batch
+                weight_batch = batch[2].to(device)   # in case we need the index of samples in this batch
             total += torch.sum(weight_batch)
             num_batches += 1
             logits = model(X_batch)
             probs = torch.softmax(logits, dim = 1)
             y_pred = torch.argmax(logits, dim = 1)
             count_correct = (y_pred == Y_batch).to(device)
-            count_correct.get_device()
             correct += torch.mul(weight_batch, count_correct).cpu().numpy()
             loss = criterion(probs, Y_batch)
             weighted_loss = torch.mean(torch.mul(loss, weight_batch)) # modify
