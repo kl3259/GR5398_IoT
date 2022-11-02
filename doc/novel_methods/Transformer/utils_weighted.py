@@ -120,7 +120,7 @@ def prepare_data_w_weight(test_ratio=0.2, weights = np.ones(951) / 951.0, seed =
 
 def get_conf(model, seed):
     '''
-    Compute confidence score based on attention for each training data
+    Compute confidence score based on attention for all video samples
     :model: trained transformer model
     :output: confidence score for each sample
     '''
@@ -131,12 +131,19 @@ def get_conf(model, seed):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     frame_attn_list = []
     model.to(device)
+
+    all_data = np.load(FEATURE_ARCHIVE + "all_feature_interp951.npz", allow_pickle=True)
+    X_all = all_data["X"]
+    Y_all = all_data["Y"]
+    X_all = X_all.reshape(-1, 100, 34).transpose(0, 2, 1)
+    all_dataset = mydataset(X_all, Y_all)
+    allloader = DataLoader(all_dataset, batch_size = 64, shuffle = False)
+
     with torch.no_grad():
-        trainloader, _, test_idx = prepare_data_w_weight(seed = seed)
-        mask = np.ones(conf_keypoints.shape[0], dtype = np.bool)
-        mask[test_idx] = 0
-        conf_keypoints_train = conf_keypoints[mask, ...] # only for training data
-        for batch in trainloader:
+        # mask = np.ones(conf_keypoints.shape[0], dtype = np.bool)
+        # mask[test_idx] = 0
+        # conf_keypoints_train = conf_keypoints[mask, ...] # only for training data
+        for batch in allloader:
             X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
             if len(batch) == 3:
                  weight_batch = batch[2].to(device)
@@ -147,10 +154,11 @@ def get_conf(model, seed):
             frame_attn = frame_attn[:,:,:100, :100] # remove cls token and positional encoding
             frame_attn_single_head = torch.mean(frame_attn, dim = 1).cpu().numpy() # (B, length, length)
             frame_attn_list.append(frame_attn_single_head)
+
         frame_attn_train = np.concatenate(frame_attn_list, axis = 0) # (n_training, length, length)
         frame_attn_train = np.mean(frame_attn_train, axis = 2) # (n_training, length) -> attention by frame
         # elementwise product
-        conf_score = conf_keypoints_train * frame_attn_train # elementwise product -> (n_training, n_frames)
+        conf_score = conf_keypoints * frame_attn_train # elementwise product -> (n_training, n_frames)
         conf_score = np.mean(conf_score, axis = 1) # (n_training, )
         # minmax scalar
         conf_score_std = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
