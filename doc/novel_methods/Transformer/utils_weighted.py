@@ -122,12 +122,13 @@ def get_conf(model, seed, method = "attn"):
     '''
     Compute confidence score based on attention for all video samples
     :model: trained transformer model
+    :method: attn / margin / entropy
     :output: confidence score for each sample
     '''
 
     CONF_DIR = FEATURE_ARCHIVE + "confidence_scores_by_frame.npy"
-    conf_keypoints = np.load(CONF_DIR) # raw confidence score in shape (n_videos, n_frame, n_keypoints)
-    conf_keypoints = np.mean(conf_keypoints, axis = 2)
+    conf_keypoints = np.load(CONF_DIR) # raw confidence score in shape (n_sapmles, n_frames, n_keypoints)
+    conf_keypoints = np.mean(conf_keypoints, axis = 2) # (n_sapmles, n_frames)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     frame_attn_list = []
@@ -163,6 +164,8 @@ def get_conf(model, seed, method = "attn"):
             # elementwise product
             conf_score = conf_keypoints * frame_attn # elementwise product -> (n_samples, n_frames)
             conf_score = np.mean(conf_score, axis = 1) # (n_samples, )
+            # minmax scalar
+            conf_score = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
     elif method == "margin":
         with torch.no_grad():
             for batch in allloader:
@@ -180,14 +183,30 @@ def get_conf(model, seed, method = "attn"):
             for i in range(pred.shape[0]):
                 temp_max_prob = np.max(pred[i, :])
                 temp_second_highest_prob = np.partition(pred[i, :].flatten(), -2)[-2]
-                temp_min_prob = np.min(pred[i, :])
                 conf_score[i] = np.abs(temp_max_prob - temp_second_highest_prob)
+    elif method == "entropy":
+        with torch.no_grad():
+            for batch in allloader:
+                X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
+                if len(batch) == 3:
+                    weight_batch = batch[2].to(device)
+                # forward
+                logits = model(X_batch)
+                probs = torch.softmax(logits, dim = 1).cpu().numpy()
+                prob_list.append(probs)
+            
+            pred = np.concatenate(prob_list, axis = 0)
+            conf_score = np.empty(pred.shape[0])
 
+            for i in range(pred.shape[0]):
+                log_prob = np.log2(pred[i, :])
+                entropy_vec = np.multiply(log_prob, pred[i,:])
+                conf_score[i] = -np.sum(entropy_vec)
 
-    # minmax scalar
-    conf_score_std = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
+    # # minmax scalar
+    # conf_score_std = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
 
-    return conf_score_std
+    return conf_score
 
 
 def get_loss_acc_w_weight(model, dataloader, criterion = nn.CrossEntropyLoss(reduction = 'none')):

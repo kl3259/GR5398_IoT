@@ -6,6 +6,7 @@ import numpy as np
 from utils_weighted import *
 from utils import get_loss_acc
 from model import transformer_base, transformer_large, transformer_huge
+from score import get_high_quali_pred
 
 from utils_weighted import FEATURE_ARCHIVE
 
@@ -143,12 +144,12 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
     """
     seed = 20220728
     model_save_dir = "../model_weights/"
+    result_save_dir = "../results/"
     if not os.path.exists(model_save_dir):
         os.mkdir(model_save_dir)
     
     for i in range(5):
         this_seed = seed + i
-        save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
 
         # instantiate model
         if size == "base":
@@ -158,9 +159,12 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
         elif size == "huge":
             model = transformer_huge()
         
+        # iterative training
         for iter in range(iterations):
-            print(f'Iteration: {iter:4d}')
             print('-' * 60)
+            print(f'Size: {size} | Seed: {this_seed} | Iteration: {iter:4d} | Method: {method} ')
+            save_path = model_save_dir + "Transformer_{}_seed_{}_weighted_{}_iter_{}.pth".format(size, i+1, method, iter)
+
             if iter == 0:
                 weights = np.ones(951) / 951.0 # initialize weights -> unweighted at first
             trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, seed = this_seed, weights = weights)
@@ -170,8 +174,14 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
             criterion = nn.CrossEntropyLoss(reduction = 'none')
             train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
             weights = get_conf(model = model, seed = this_seed, method = method) # update weights
-    pass
 
+            # evaluation
+            with torch.no_grad():
+                accuracy_arr = get_high_quali_pred(model = model, seed = this_seed, method = method)
+                result_save_path = result_save_dir + "accu_Transformer_{}_seed_{}_weighted_{}_iter_{}.npy".format(size, i+1, method, iter)
+                np.save(arr = accuracy_arr, file = result_save_path)
+                print(f'Accuracy Array: {accuracy_arr}')
+    pass
 
 
 if __name__ == "__main__":

@@ -4,8 +4,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from sklearn.preprocessing import MinMaxScaler
 from model import transformer_base, transformer_huge, transformer_large
-from train_weighted import prepare_data_w_weight
-from utils_weighted import FEATURE_ARCHIVE
+from utils_weighted import FEATURE_ARCHIVE, prepare_data_w_weight
 
 DETECTRON_SCORE_PATH = FEATURE_ARCHIVE + 'confidence_scores_by_frame.npy'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,7 +71,7 @@ def get_margin(pred, method = "entropy"):
                     continue
                 diff_list.append(np.abs(temp_max_prob - pred[i, j]))
             margin[i] = np.mean(diff_list)
-    elif method == "single":
+    elif method == "single": # margin
         for i in range(pred.shape[0]):
             temp_max_prob = np.max(pred[i, :])
             temp_second_highest_prob = np.partition(pred[i, :].flatten(), -2)[-2]
@@ -132,37 +131,101 @@ def get_all_corr():
 
     return result_df
 
-def get_high_quali_pred(model, seed, quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
+def get_high_quali_pred(model, seed, method = "margin", quantile = [0, 0.2, 0.4, 0.6, 0.8, 1.0]):
     '''
     Get test accuracy with subsets of high quality videos, quality measured by margin
     :model: pretrained transformer default: transformer huge
     :testloader: test dataloader
-    :margin: margin value for each test video
+    :method: methods for choosing high-quality videos: attn / margin / entropy
     :return: list of test accuracy on those high quality videos
     '''
-    from sklearn.metrics import accuracy_score
-    import pandas as pd
+    CONF_DIR = FEATURE_ARCHIVE + "confidence_scores_by_frame.npy"
+    conf_keypoints = np.load(CONF_DIR) # raw confidence score in shape (n_sapmles, n_frames, n_keypoints)
+    conf_keypoints = np.mean(conf_keypoints, axis = 2) # (n_sapmles, n_frames)
+
     _, testloader, _ = prepare_data_w_weight(seed = seed)
     y_pred, y_true = get_prediction(model, testloader)
-    margin = get_margin(y_pred, method = "entropy")
-    # import matplotlib
-    # from matplotlib import pyplot as plt
-    # fig, ax = plt.subplots(1, 1, dpi = 270)
-    # ax.hist(margin, bins = 200)
-    # ax.set_title("Histogram of Entropy")
-    quantile_values = np.quantile(margin, quantile)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    frame_attn_list = []
+    prob_list = []
+    if method == "attn":
+        with torch.no_grad():
+            for batch in testloader:
+                X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
+                if len(batch) == 3:
+                    weight_batch = batch[2].to(device)
+                # forward
+                logits = model(X_batch)
+                probs = torch.softmax(logits, dim = 1)
+                frame_attn = model.blocks[-1].attn.attn # (B, n_heads, length + 1, length + 1)
+                frame_attn = frame_attn[:,:,:100, :100] # remove cls token and positional encoding
+                frame_attn_single_head = torch.mean(frame_attn, dim = 1).cpu().numpy() # (B, length, length)
+                frame_attn_list.append(frame_attn_single_head)
+
+            frame_attn = np.concatenate(frame_attn_list, axis = 0) # (n_samples, length, length)
+            frame_attn = np.mean(frame_attn, axis = 2) # (n_samples, length) -> attention by frame
+            # elementwise product
+            conf_score = conf_keypoints * frame_attn # elementwise product -> (n_samples, n_frames)
+            conf_score = np.mean(conf_score, axis = 1) # (n_samples, )
+            # minmax scalar
+            conf_score = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
+    elif method == "margin":
+        with torch.no_grad():
+            for batch in testloader:
+                X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
+                if len(batch) == 3:
+                    weight_batch = batch[2].to(device)
+                # forward
+                logits = model(X_batch)
+                probs = torch.softmax(logits, dim = 1).cpu().numpy()
+                prob_list.append(probs)
+            
+            pred = np.concatenate(prob_list, axis = 0)
+            conf_score = np.empty(pred.shape[0])
+
+            for i in range(pred.shape[0]):
+                temp_max_prob = np.max(pred[i, :])
+                temp_second_highest_prob = np.partition(pred[i, :].flatten(), -2)[-2]
+                conf_score[i] = np.abs(temp_max_prob - temp_second_highest_prob)
+    elif method == "entropy":
+        with torch.no_grad():
+            for batch in testloader:
+                X_batch, Y_batch = batch[0].to(device), batch[1].to(device)
+                if len(batch) == 3:
+                    weight_batch = batch[2].to(device)
+                # forward
+                logits = model(X_batch)
+                probs = torch.softmax(logits, dim = 1).cpu().numpy()
+                prob_list.append(probs)
+            
+            pred = np.concatenate(prob_list, axis = 0)
+            conf_score = np.empty(pred.shape[0])
+
+            for i in range(pred.shape[0]):
+                log_prob = np.log2(pred[i, :])
+                entropy_vec = np.multiply(log_prob, pred[i,:])
+                conf_score[i] = -np.sum(entropy_vec)
+    else:
+        raise KeyError("Method is not available!")
+
+    quantile_values = np.quantile(conf_score, quantile)
     # get masks
-    mask = np.empty((len(margin), len(quantile)))
+    mask = np.empty((len(conf_score), len(quantile)))
     for i in range(len(quantile)):
-        mask[:, i] = (margin <= quantile_values[i]) # lower entropy is better!
+        if method == "entropy":
+            mask[:, i] = (conf_score <= quantile_values[i]) # lower entropy is better!
+        else:
+            mask[:, i] = (conf_score >= quantile_values[i])
     # get test accuracy
     y_pred = np.argmax(y_pred, axis = 1) # to dense form
     accuracy_arr = np.empty(len(quantile))
     for i in range(len(quantile)):
-        # print(f'Number of high-quality videos: {np.sum(mask[:,i] == True)}')
-        accuracy_arr[i] = accuracy_score(y_pred = y_pred[mask[:,i] == True], y_true = y_true[mask[:,i] == True])
+        print(f'Number of high-quality videos: {np.sum(mask[:,i] == True)}')
+        masked_pred = y_pred[mask[:,i] == True]
+        masked_true = y_true[mask[:,i] == True]
+        # accuracy_arr[i] = accuracy_score(y_pred = y_pred[mask[:,i] == True], y_true = y_true[mask[:,i] == True])
+        accuracy_arr[i] = np.sum(masked_pred == masked_true) / len(masked_true)
     return accuracy_arr
-
 
 
 if __name__ == "__main__":
