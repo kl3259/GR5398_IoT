@@ -186,6 +186,7 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
                     model = transformer_large()
                 elif size == "huge":
                     model = transformer_huge()
+                model.to(device)
                 model.load_state_dict(torch.load(save_path, map_location = device))
 
                 accuracy_arr = get_high_quali_pred(model = model, seed = this_seed, method = method)
