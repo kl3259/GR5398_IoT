@@ -117,6 +117,7 @@ def train_transfomer_w_weight(size="base"):
 
     for i in range(5):
         this_seed = seed + i
+        torch.manual_seed(this_seed)
         save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
         trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio=0.2, seed=this_seed)
 
@@ -145,12 +146,13 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
     seed = 20220728
     model_save_dir = "../model_weights/"
     result_save_dir = "../results/"
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if not os.path.exists(model_save_dir):
         os.mkdir(model_save_dir)
     
-    for i in range(5):
+    for i in range(2, 5):
         this_seed = seed + i
-
+        torch.manual_seed(this_seed) # reproducible
         # instantiate model
         if size == "base":
             model = transformer_base()
@@ -177,6 +179,15 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
 
             # evaluation
             with torch.no_grad():
+                # get the best model
+                if size == "base":
+                    model = transformer_base()
+                elif size == "large":
+                    model = transformer_large()
+                elif size == "huge":
+                    model = transformer_huge()
+                model.load_state_dict(torch.load(save_path, map_location = device))
+
                 accuracy_arr = get_high_quali_pred(model = model, seed = this_seed, method = method)
                 result_save_path = result_save_dir + "accu_Transformer_{}_seed_{}_weighted_{}_iter_{}.npy".format(size, i+1, method, iter)
                 np.save(arr = accuracy_arr, file = result_save_path)
