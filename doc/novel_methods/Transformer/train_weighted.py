@@ -150,7 +150,7 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
     if not os.path.exists(model_save_dir):
         os.mkdir(model_save_dir)
     
-    for i in range(2, 5):
+    for i in range(5):
         this_seed = seed + i
         torch.manual_seed(this_seed) # reproducible
         # instantiate model
