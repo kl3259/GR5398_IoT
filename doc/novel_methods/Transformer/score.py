@@ -143,7 +143,7 @@ def get_high_quali_pred(model, seed, method = "margin", quantile = [0, 0.2, 0.4,
     conf_keypoints = np.load(CONF_DIR) # raw confidence score in shape (n_sapmles, n_frames, n_keypoints)
     conf_keypoints = np.mean(conf_keypoints, axis = 2) # (n_sapmles, n_frames)
 
-    _, testloader, _ = prepare_data_w_weight(seed = seed)
+    _, testloader, test_index = prepare_data_w_weight(seed = seed)
     y_pred, y_true = get_prediction(model, testloader)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     frame_attn_list = []
@@ -164,8 +164,9 @@ def get_high_quali_pred(model, seed, method = "margin", quantile = [0, 0.2, 0.4,
 
             frame_attn = np.concatenate(frame_attn_list, axis = 0) # (n_samples, length, length)
             frame_attn = np.mean(frame_attn, axis = 2) # (n_samples, length) -> attention by frame
+            conf_keypoints_test = conf_keypoints[test_index, :]
             # elementwise product
-            conf_score = conf_keypoints * frame_attn # elementwise product -> (n_samples, n_frames)
+            conf_score = conf_keypoints_test * frame_attn # elementwise product -> (n_samples, n_frames)
             conf_score = np.mean(conf_score, axis = 1) # (n_samples, )
             # minmax scalar
             conf_score = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
