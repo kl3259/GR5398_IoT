@@ -24,7 +24,7 @@ class mydataset_w_weight(Dataset):
         return len(self.Label)
 
 # initialization weights uniformly
-def prepare_data_w_weight(test_ratio = 0.2, weights = np.ones(951) / 951.0, seed = 20220712):
+def prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, weights = np.ones(951), seed = 20220712):
     all_data = np.load(FEATURE_ARCHIVE + "all_feature_interp951.npz", allow_pickle=True)
     X_all = all_data["X"]
     Y_all = all_data["Y"]
@@ -35,28 +35,34 @@ def prepare_data_w_weight(test_ratio = 0.2, weights = np.ones(951) / 951.0, seed
     n_samples = X_all.shape[0]
     assert n_samples == len(weights), "The number of weights({}) doesn't match the number of samples({})".format(len(weights), n_samples)
     test_size = int(n_samples * test_ratio)
+    val_size = int(n_samples * val_ratio)
     perm = np.random.permutation(n_samples)
     test_idx = perm[:test_size]
-    train_idx = perm[test_size:]
+    val_idx = perm[test_size:(test_size + val_size)]
+    train_idx = perm[(test_size + val_size):]
     X_train, Y_train, weights_train = X_all[train_idx], Y_all[train_idx], weights[train_idx]
     X_test, Y_test, weights_test = X_all[test_idx], Y_all[test_idx], weights[test_idx]
+    X_val, Y_val, weights_val = X_all[val_idx], Y_all[val_idx], weights[val_idx]
 
     # create dataset and dataloader
     train_dataset = mydataset_w_weight(X_train, Y_train, weights_train)
     test_dataset = mydataset_w_weight(X_test, Y_test, weights_test)
+    val_dataset = mydataset_w_weight(X_val, Y_val, weights_val)
     trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=20, shuffle=False)
+    valloader = DataLoader(val_dataset, batch_size=20, shuffle=False)
 
-    return trainloader, testloader, test_idx
+    return trainloader, valloader, testloader, test_idx
 
 
-def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path):
+def train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path):
     """
     Train a neural network and save the best model on accoding to its performance on testloader
     :param model: the model to be trained
     :param epochs: number of epochs for training
     :param weight: confidence scores work as weight in training and testing
     :param trainloader: train dataloader
+    :param valloader: validation dataloader
     :param testloader: test dataloader
     :param optimizer: the optimizer for gradient descent
     :param criterion: the loss function
@@ -67,7 +73,7 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
     model.to(device)
 
     # train model
-    best_test_acc = 0
+    best_val_acc = 0
     model.train()
     for epoch in range(epochs):
         for batch in trainloader:
@@ -89,19 +95,19 @@ def train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion,
             model.eval()
             # evaluate train
             train_loss, train_acc = get_loss_acc_w_weight(model, trainloader, criterion) # weighted training
-            # evaluate test
+            # evaluate validatino & test
+            val_loss, val_acc = get_loss_acc(model, valloader) # unweighted
             test_loss, test_acc = get_loss_acc(model, testloader) # test metrics are not weighted! -> default criterion
 
-        # save model weights if it's the best
-        if test_acc >= best_test_acc:
-            best_test_acc = test_acc
+        if val_acc >= best_val_acc: # save the best model
+            best_val_acc = val_acc
             torch.save(model.state_dict(), save_path)
-            print("Epoch {:>4}/{:>4} | Training loss: {:>8} | Testing loss: {:>8} | Training acc: {:>8} | Testing acc: {:>8}".format(
-                epoch+1, epochs, train_loss, test_loss, train_acc, test_acc
+            print("Epoch {:>4}/{:>4} | Train loss: {:>2.8f} | Valid loss: {:>2.8f} | Test loss: {:>2.8f} | Train acc: {:>2.8f} | Valid acc: {:>2.8f} | Test acc: {:>2.8f}".format(
+                epoch+1, epochs, train_loss, val_loss, test_loss, train_acc, val_acc, test_acc
             ))
             print("Saved!")
-    print("Epoch {:>4}/{:>4} | Training loss: {:>8} | Testing loss: {:>8} | Training acc: {:>8} | Testing acc: {:>8}".format(
-        epoch+1, epochs, train_loss, test_loss, train_acc, test_acc
+    print("Epoch {:>4}/{:>4} | Train loss: {:>2.8f} | Valid loss: {:>2.8f} | Test loss: {:>2.8f} | Train acc: {:>2.8f} | Valid acc: {:>2.8f} | Test acc: {:>2.8f}".format(
+        epoch+1, epochs, train_loss, val_loss, test_loss, train_acc, val_acc, test_acc
     ))
 
 
@@ -119,7 +125,7 @@ def train_transfomer_w_weight(size="base"):
         this_seed = seed + i
         torch.manual_seed(this_seed)
         save_path = model_save_dir + "Transformer_{}_{}_weighted.pth".format(size, i+1)
-        trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio=0.2, seed=this_seed)
+        trainloader, valloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, seed = this_seed)
 
         # train model
         if size == "base":
@@ -132,7 +138,7 @@ def train_transfomer_w_weight(size="base"):
         epochs = 200
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
         criterion = nn.CrossEntropyLoss(reduction = 'none')
-        train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path)
+        train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path)
 
 
 def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
@@ -163,18 +169,18 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
         
         # iterative training
         for iter in range(iterations):
-            print('-' * 60)
+            print('-' * 100)
             print(f'Size: {size} | Seed: {this_seed} | Iteration: {iter:4d} | Method: {method} ')
             save_path = model_save_dir + "Transformer_{}_seed_{}_weighted_{}_iter_{}.pth".format(size, i+1, method, iter)
 
             if iter == 0:
-                weights = np.ones(951) / 951.0 # initialize weights -> unweighted at first
-            trainloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, seed = this_seed, weights = weights)
+                weights = np.ones(951)# initialize weights -> unweighted at first
+            trainloader, valloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, seed = this_seed, weights = weights)
 
             epochs = 200
             optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
             criterion = nn.CrossEntropyLoss(reduction = 'none')
-            train_w_weight(model, epochs, trainloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
+            train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
             weights = get_conf(model = model, seed = this_seed, method = method) # update weights
 
             # evaluation

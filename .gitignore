@@ -31,3 +31,9 @@ doc/novel_methods/Transformer/IOT_train_with_margin.ipynb
 doc/novel_methods/results/results_margin_training_margin_attn_entropy.zip
 doc/novel_methods/results/simu_result_margin_margin.png
 doc/novel_methods/Transformer/backup.md
+doc/novel_methods/results/results-margin-and-attn.zip
+doc/novel_methods/results/simu_result_attn_attn.png
+doc/novel_methods/results/simu_result_attn_entropy.png
+doc/novel_methods/results/simu_result_attn_margin.png
+doc/novel_methods/results/simu_result_margin_attn.png
+doc/novel_methods/results/simu_result_margin_entropy.png

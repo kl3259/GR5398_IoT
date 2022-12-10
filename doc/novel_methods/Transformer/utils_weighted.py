@@ -31,7 +31,7 @@ class mydataset_w_weight(Dataset):
     def __len__(self):
         return len(self.Label)
 
-def prepare_data(test_ratio=0.2, seed=20220712):
+def prepare_data(test_ratio=0.2, val_ratio = 0.1, seed=20220712):
     """
     Prepare two dataloader for train and test. The dataset contains 951 samples.
     :param test_ratio: Proportion of test data
@@ -49,24 +49,26 @@ def prepare_data(test_ratio=0.2, seed=20220712):
     np.random.seed(seed)
     n_samples = X_all.shape[0]
     test_size = int(n_samples * test_ratio)
+    val_size = int(n_samples * val_ratio)
     perm = np.random.permutation(n_samples)
     test_idx = perm[:test_size]
-    train_idx = perm[test_size:]
-    X_train = X_all[train_idx]
-    Y_train = Y_all[train_idx]
-    X_test = X_all[test_idx]
-    Y_test = Y_all[test_idx]
+    val_idx = perm[test_size:(test_size + val_size)]
+    train_idx = perm[(test_size + val_size):]
+    X_train, X_test = X_all[train_idx], X_all[test_idx]
+    Y_train, Y_test = Y_all[train_idx], Y_all[test_idx]
+    X_val, Y_val = X_all[val_idx], Y_all[val_idx]
 
     # create dataset and dataloader
     train_dataset = mydataset(X_train, Y_train)
     test_dataset = mydataset(X_test, Y_test)
-    trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=20, shuffle=False)
-
+    val_dataset = mydataset_w_weight(X_val, Y_val, weights_val)
+    trainloader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    valloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
     return trainloader, testloader
 
 # initialization weights uniformly
-def prepare_data_w_weight(test_ratio=0.2, weights = np.ones(951) / 951.0, seed = 20220712):
+def prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, weights = np.ones(951), seed = 20220712):
     all_data = np.load(FEATURE_ARCHIVE + "all_feature_interp951.npz", allow_pickle=True)
     X_all = all_data["X"]
     Y_all = all_data["Y"]
@@ -77,19 +79,24 @@ def prepare_data_w_weight(test_ratio=0.2, weights = np.ones(951) / 951.0, seed =
     n_samples = X_all.shape[0]
     assert n_samples == len(weights), "The number of weights({}) doesn't match the number of samples({})".format(len(weights), n_samples)
     test_size = int(n_samples * test_ratio)
+    val_size = int(n_samples * val_ratio)
     perm = np.random.permutation(n_samples)
     test_idx = perm[:test_size]
-    train_idx = perm[test_size:]
+    val_idx = perm[test_size:(test_size + val_size)]
+    train_idx = perm[(test_size + val_size):]
     X_train, Y_train, weights_train = X_all[train_idx], Y_all[train_idx], weights[train_idx]
     X_test, Y_test, weights_test = X_all[test_idx], Y_all[test_idx], weights[test_idx]
+    X_val, Y_val, weights_val = X_all[val_idx], Y_all[val_idx], weights[val_idx]
 
     # create dataset and dataloader
     train_dataset = mydataset_w_weight(X_train, Y_train, weights_train)
     test_dataset = mydataset_w_weight(X_test, Y_test, weights_test)
-    trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=20, shuffle=False)
+    val_dataset = mydataset_w_weight(X_val, Y_val, weights_val)
+    trainloader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    valloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 
-    return trainloader, testloader, test_idx
+    return trainloader, valloader, testloader, test_idx
 
 # def get_loss_acc(model, dataloader, criterion=nn.CrossEntropyLoss()):
 #     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -166,6 +173,7 @@ def get_conf(model, seed, method = "attn"):
             conf_score = np.mean(conf_score, axis = 1) # (n_samples, )
             # minmax scalar
             conf_score = (conf_score - np.min(conf_score)) / (np.max(conf_score) - np.min(conf_score))
+            # return conf_score, frame_attn
     elif method == "margin":
         with torch.no_grad():
             for batch in allloader:
