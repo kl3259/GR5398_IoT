@@ -122,7 +122,7 @@ def get_all_corr():
             model.load_state_dict(torch.load(weight_path, map_location = DEVICE))
 
             video_scores_all, video_scores_upper = init_confidence_score()
-            _, testloader, test_idx = prepare_data_w_weight()
+            _, _, testloader, test_idx = prepare_data_w_weight()
             pred, _ = get_prediction(model, testloader) # (190, 5)
             # margin = get_margin(pred) # (190,)
             margin = get_margin(pred) # (190,) # updated
@@ -143,7 +143,7 @@ def get_high_quali_pred(model, seed, method = "margin", quantile = [0, 0.2, 0.4,
     conf_keypoints = np.load(CONF_DIR) # raw confidence score in shape (n_sapmles, n_frames, n_keypoints)
     conf_keypoints = np.mean(conf_keypoints, axis = 2) # (n_sapmles, n_frames)
 
-    _, testloader, test_index = prepare_data_w_weight(seed = seed)
+    _, _, testloader, test_index = prepare_data_w_weight(seed = seed)
     y_pred, y_true = get_prediction(model, testloader)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     frame_attn_list = []

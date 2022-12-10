@@ -92,9 +92,9 @@ def prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, weights = np.ones(9
     train_dataset = mydataset_w_weight(X_train, Y_train, weights_train)
     test_dataset = mydataset_w_weight(X_test, Y_test, weights_test)
     val_dataset = mydataset_w_weight(X_val, Y_val, weights_val)
-    trainloader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-    valloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+    trainloader = DataLoader(train_dataset, batch_size=256, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+    valloader = DataLoader(val_dataset, batch_size=128, shuffle=False)
 
     return trainloader, valloader, testloader, test_idx
 
