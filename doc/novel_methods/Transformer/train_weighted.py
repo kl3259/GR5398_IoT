@@ -48,14 +48,14 @@ def prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, weights = np.ones(9
     train_dataset = mydataset_w_weight(X_train, Y_train, weights_train)
     test_dataset = mydataset_w_weight(X_test, Y_test, weights_test)
     val_dataset = mydataset_w_weight(X_val, Y_val, weights_val)
-    trainloader = DataLoader(train_dataset, batch_size=256, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=128, shuffle=False)
-    valloader = DataLoader(val_dataset, batch_size=128, shuffle=False)
+    trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=20, shuffle=False)
+    valloader = DataLoader(val_dataset, batch_size=20, shuffle=False)
 
     return trainloader, valloader, testloader, test_idx
 
 
-def train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path):
+def train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path, early_stopping = None, save = True):
     """
     Train a neural network and save the best model on accoding to its performance on testloader
     :param model: the model to be trained
@@ -67,6 +67,8 @@ def train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer,
     :param optimizer: the optimizer for gradient descent
     :param criterion: the loss function
     :param save_path: the path for saving model parameters
+    :param early_stopping: None or a integer number indicating the patience
+    :param save: flag for saving the model or not, default is True
     """
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Trained on {}".format(device))
@@ -74,6 +76,7 @@ def train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer,
 
     # train model
     best_val_acc = 0
+    patience = 0
     model.train()
     for epoch in range(epochs):
         for batch in trainloader:
@@ -99,13 +102,21 @@ def train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer,
             val_loss, val_acc = get_loss_acc(model, valloader) # unweighted
             test_loss, test_acc = get_loss_acc(model, testloader) # test metrics are not weighted! -> default criterion
 
-        if val_acc >= best_val_acc: # save the best model
+        if val_acc <= best_val_acc:
+            patience += 1
+        if val_acc > best_val_acc: # save the best model
             best_val_acc = val_acc
-            torch.save(model.state_dict(), save_path)
+            patience = 0 # reset patience
             print("Epoch {:>4}/{:>4} | Train loss: {:>2.8f} | Valid loss: {:>2.8f} | Test loss: {:>2.8f} | Train acc: {:>2.8f} | Valid acc: {:>2.8f} | Test acc: {:>2.8f}".format(
                 epoch+1, epochs, train_loss, val_loss, test_loss, train_acc, val_acc, test_acc
             ))
-            print("Saved!")
+            if save:
+                torch.save(model.state_dict(), save_path)
+                print("Saved!")
+        if not early_stopping:
+            continue
+        elif patience >= early_stopping:
+            break
     print("Epoch {:>4}/{:>4} | Train loss: {:>2.8f} | Valid loss: {:>2.8f} | Test loss: {:>2.8f} | Train acc: {:>2.8f} | Valid acc: {:>2.8f} | Test acc: {:>2.8f}".format(
         epoch+1, epochs, train_loss, val_loss, test_loss, train_acc, val_acc, test_acc
     ))
@@ -141,13 +152,15 @@ def train_transfomer_w_weight(size="base"):
         train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path)
 
 
-def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
+def train_transformer_EM(iterations = 3, method = "attn", size = "huge", early_stopping = None, save = True):
     """
     Train a transformer model 5 times with different train test split. 
     For each model, update sample weights by confidence score and retrain the model for weighted loss
     :iterations: number of iterations for EM training
     :method: the method to compute sample weights
     :size: Size of the transformer model. "base" or "large" or "huge"
+    :early_stopping: None or a integer number indicating the patience
+    :save: flag for saving the model or not, default is True
     """
     seed = 20220728
     model_save_dir = "../model_weights/"
@@ -174,13 +187,13 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
             save_path = model_save_dir + "Transformer_{}_seed_{}_weighted_{}_iter_{}.pth".format(size, i+1, method, iter)
 
             if iter == 0:
-                weights = np.ones(951)# initialize weights -> unweighted at first
+                weights = np.ones(951) # initialize weights -> unweighted at first
             trainloader, valloader, testloader, test_idx = prepare_data_w_weight(test_ratio = 0.2, val_ratio = 0.1, seed = this_seed, weights = weights)
 
             epochs = 200
             optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
             criterion = nn.CrossEntropyLoss(reduction = 'none')
-            train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path) # weights inside of dataloaders
+            train_w_weight(model, epochs, trainloader, valloader, testloader, optimizer, criterion, save_path, early_stopping, save) # weights inside of dataloaders
             weights = get_conf(model = model, seed = this_seed, method = method) # update weights
 
             # evaluation
@@ -195,7 +208,7 @@ def train_transformer_EM(iterations = 3, method = "attn", size = "huge"):
                 model.to(device)
                 model.load_state_dict(torch.load(save_path, map_location = device))
 
-                accuracy_arr = get_high_quali_pred(model = model, seed = this_seed, method = method)
+                accuracy_arr = get_high_quali_pred(model = model, seed = this_seed, method = method, quantile = np.linspace(0, 1.0, 20))
                 result_save_path = result_save_dir + "accu_Transformer_{}_seed_{}_weighted_{}_iter_{}.npy".format(size, i+1, method, iter)
                 np.save(arr = accuracy_arr, file = result_save_path)
                 print(f'Accuracy Array: {accuracy_arr}')

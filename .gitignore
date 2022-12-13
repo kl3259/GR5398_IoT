@@ -37,3 +37,7 @@ doc/novel_methods/results/simu_result_attn_entropy.png
 doc/novel_methods/results/simu_result_attn_margin.png
 doc/novel_methods/results/simu_result_margin_attn.png
 doc/novel_methods/results/simu_result_margin_entropy.png
+*.png
+doc/novel_methods/Transformer/video_inspector.ipynb
+doc/novel_methods/Transformer/visualization.py
+data/3D_features-20220813T030131Z-001.zip
